@@ -41,7 +41,7 @@ public class Driver {
 	}
 	
 	private static double generateHumidity() {
-		return random.nextDouble();
+		return random.nextDouble()*100;
 	}
 	
 	private static int generateCriticalSensor() {
