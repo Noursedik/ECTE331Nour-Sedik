@@ -1,0 +1,4 @@
+2025-05-20 20:41:39 , Discrepancy detected. Outlier(s): Sensor 3.1 Sensor 3.2 Sensor 3.3
+2025-05-20 20:46:46 , Discrepancy detected. Outlier(s): Sensor 3.1 Sensor 3.2 Sensor 3.3
+2025-05-20 20:48:22 , Discrepancy detected. Outlier(s): Sensor 3.3
+2025-05-20 20:49:11 , Discrepancy detected. Outlier(s): Sensor 3.1 Sensor 3.2 Sensor 3.3
