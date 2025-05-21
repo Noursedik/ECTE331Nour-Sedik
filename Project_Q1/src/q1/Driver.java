@@ -131,12 +131,27 @@ public class Driver {
 	}
 	
 	//recording discrepancies method
-	private static void logDiscrepancy(int s0, int s1, int s2) {
-       StringBuilder outliers = new StringBuilder();
-       if (s0 != s1 && s0 != s2) outliers.append("Sensor 3.1 ");
-       if (s1 != s0 && s1 != s2) outliers.append("Sensor 3.2 ");
-       if (s2 != s0 && s2 != s1) outliers.append("Sensor 3.3 ");
-       String message = "Discrepancy detected. Outlier(s): " + outliers.toString().trim();
+	private static void logDiscrepancy(int sensor0, int sensor1, int sensor2) {
+		boolean flag01 = false,flag12 = false,flag02 = false;
+		String outlier;
+		
+		if(sensor0==sensor1)
+			flag01=true;
+		if(sensor1==sensor2)
+			flag12=true;
+		if(sensor0==sensor2)
+			flag02=true;
+		
+       if (flag12) 
+    	   outlier= "Sensor 3.1 ";
+       else if (flag02) 
+    	   outlier="Sensor 3.2 ";
+       else if (flag01) 
+    	   outlier="Sensor 3.3 ";
+       else 
+    	   outlier="Sensor 3.1, Sensor 3.2, Sensor3.3";
+       
+       String message = "Discrepancy detected, Outlier(s): " + outlier;
        FileLogger.log("base", message);
    }
 }
