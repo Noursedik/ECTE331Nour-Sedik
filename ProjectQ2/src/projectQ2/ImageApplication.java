@@ -15,8 +15,8 @@ public class ImageApplication{
 	
 	
 	public static void main(String[] args) {
-		String fileName1="c:/image/Rain_Tree.jpg";
-		String fileName2="c:/image/Wr.jpg";  
+		String fileName1="C:\\Users\\isedd\\OneDrive\\Desktop\\Nour\\ECTE331 Project q2\\Rain_Tree.jpg";
+		String fileName2="C:\\Users\\isedd\\OneDrive\\Desktop\\Nour\\ECTE331 Project q2\\Wr.jpg";  
 		
 		int [] numThreads= {1,2,6,10};
 		
@@ -44,7 +44,6 @@ public class ImageApplication{
 			imageReadWrite.writeJpgImage(output_img, fileName2);
 		}
 		
-		imageReadWrite.writeJpgImage(input_img, fileName2);
             
 		// demo reshaping a 4*4 matrix into 16 1-D array
 		int width=4, height=4;
@@ -75,7 +74,7 @@ public class ImageApplication{
 		int size= input.height*input.width;
 		//step 1 calculate histogram 
 		for(int color=0; color<3; color++) {
-			int[] histogram= new int[level];
+			int[] histogram= new int[level+1];
 			//might need level +1
 			for(int i=0; i< input.height;i++){
 				for(int j=0;j<input.width;j++) {
@@ -85,14 +84,32 @@ public class ImageApplication{
 			}
 			
 			//step 2 calculate the cumulative histogram
-			int[] cumalativeHist= new int [level];
+			int[] cumulativeHist= new int [level+1];
 			//set the first value of CulHistogram to first value of histogram
-			for(int i=1;i<level;i++) {
-				cumalativeHist[i]=cumalativeHist[i-1]+histogram[i];
+			cumulativeHist[0]=histogram[0];
+			for(int i=1;i<=level;i++) {
+				cumulativeHist[i]=cumulativeHist[i-1]+histogram[i];
 				
 			}
 			
 			//compute step 3
+			// normalize the cumulative histogram
+			for(int i=0; i<=level;i++) {
+				cumulativeHist[i]=(cumulativeHist[i] *level)/size;
+			}
+			//performing histogram equalization
+			for(int i=0; i< input.height;i++){
+				for(int j=0;j<input.width;j++) {
+					if(color==0) {
+						output.pixels[i][j]=new short[3];
+					}
+					
+					output.pixels[i][j][color]=(short) cumulativeHist[input.pixels[i][j][color]];
+					
+				}
+			}
+			
+			
 			
 		}
 	}
@@ -202,7 +219,7 @@ class matManipulation{
 
 class colourImage {
 	/**
-	 * A datastructure to store a colour image
+	 * A data structure to store a color image
 	 */
 	public int width;
 	public int height;
