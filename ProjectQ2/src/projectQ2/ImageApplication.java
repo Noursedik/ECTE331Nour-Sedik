@@ -4,6 +4,8 @@ import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicIntegerArray;
+
 import javax.imageio.ImageIO;
 
  
@@ -17,14 +19,18 @@ public class ImageApplication{
 	public static void main(String[] args) {
 		String fileName1="C:\\Users\\isedd\\OneDrive\\Desktop\\Nour\\ECTE331 Project q2\\Rain_Tree.jpg";
 		String fileName2="C:\\Users\\isedd\\OneDrive\\Desktop\\Nour\\ECTE331 Project q2\\Wr.jpg";  
-		
+		String fileName3="C:\\Users\\isedd\\OneDrive\\Desktop\\Nour\\ECTE331 Project q2\\Wr1.jpg"; 
+		String fileName4="C:\\Users\\isedd\\OneDrive\\Desktop\\Nour\\ECTE331 Project q2\\Wr2.jpg"; 
 		int [] numThreads= {1,2,6,10};
 		
 		colourImage input_img= new colourImage();
         // read the image filename1 and store its dimension and pixel values in ImgStruct			
 		imageReadWrite.readJpgImage(fileName1, input_img);
-		 // write ImgStruct in the jpeg file filenName2	
-		int duration=0;
+		 
+		long duration=0;
+		long totalDuration=0;
+		long timeStart=0;
+		long timeEnd=0;
 		
 		for(int i=0; i<num_loops; i++) {
 			//1.1 create an empty output image
@@ -37,13 +43,91 @@ public class ImageApplication{
 			//1.3 create the pixel values
 			output_img.pixels=new short[output_img.height][output_img.width][];
 			
+			timeStart=System.nanoTime();
+			
 			//1.4 call histogram equalization
 			singleHistogramEqualization(input_img, output_img);
 			
+			timeEnd=System.nanoTime();
+			duration=timeEnd-timeStart;
+			totalDuration=totalDuration+duration;
+			System.out.printf("%d: Single Thread Histogram Equalization took %.3f milliseconds.%n", i + 1, duration / 1e6);
 			//1.5 Write the image
 			imageReadWrite.writeJpgImage(output_img, fileName2);
 		}
+		System.out.printf("Single Thread average execution time over %d runs: %.3f milliseconds.%n", num_loops, totalDuration / (num_loops * 1e6));
 		
+		//MultiThread Figure2.a
+		for(int j:numThreads) {
+			totalDuration=0;
+			
+			for(int i=0; i<num_loops; i++) {
+				//1.1 create an empty output image
+				colourImage output_img= new colourImage();
+				
+				//1.2 get height and width
+				output_img.width=input_img.width;
+				output_img.height=input_img.height;
+				
+				//1.3 create the pixel values
+				output_img.pixels=new short[output_img.height][output_img.width][3];
+				timeStart=System.nanoTime();
+				
+				//1.4 call histogram equalization
+				try {
+				multiFigure2aHistogramEqualization(input_img, output_img,j);
+				}catch (InterruptedException e) {
+				    e.printStackTrace();
+				}
+
+				
+				//calculating execution time for each thread
+				timeEnd=System.nanoTime();
+				duration=timeEnd-timeStart;
+				totalDuration=totalDuration+duration;
+				
+				System.out.printf("%d: Multi Thread %d Histogram Equalization (2.a) took %.3f milliseconds.%n", i + 1,j, duration / 1e6);
+				//1.5 Write the image
+				imageReadWrite.writeJpgImage(output_img, fileName3);
+			}
+			System.out.printf("Multi Thread %d average execution time (2.a) over %d runs: %.3f milliseconds.%n", j,num_loops, totalDuration / (num_loops * 1e6));
+		}
+			//MultiThread Figure2.b
+			for(int j:numThreads) {
+				totalDuration=0;
+				
+				for(int i=0; i<num_loops; i++) {
+					//1.1 create an empty output image
+					colourImage output_img= new colourImage();
+					
+					//1.2 get height and width
+					output_img.width=input_img.width;
+					output_img.height=input_img.height;
+					
+					//1.3 create the pixel values
+					output_img.pixels=new short[output_img.height][output_img.width][3];
+					timeStart=System.nanoTime();
+					
+					//1.4 call histogram equalization
+					try {
+					multiFigure2bHistogramEqualization(input_img, output_img,j);
+					}catch (InterruptedException e) {
+					    e.printStackTrace();
+					}
+
+					
+					//calculating execution time for each thread
+					timeEnd=System.nanoTime();
+					duration=timeEnd-timeStart;
+					totalDuration=totalDuration+duration;
+					
+					System.out.printf("%d: Multi Thread %d Histogram Equalization (2.b) took %.3f milliseconds.%n", i + 1,j, duration / 1e6);
+					//1.5 Write the image
+					imageReadWrite.writeJpgImage(output_img, fileName4);
+				}
+				System.out.printf("Multi Thread %d average execution time (2.b) over %d runs: %.3f milliseconds.%n", j,num_loops, totalDuration / (num_loops * 1e6));
+			
+		}
             
 		// demo reshaping a 4*4 matrix into 16 1-D array
 		int width=4, height=4;
@@ -116,18 +200,160 @@ public class ImageApplication{
 	
 	
 	
+	public static void multiFigure2aHistogramEqualization(colourImage input, colourImage output, int numThreads) throws InterruptedException{
+		
+		int size= input.height*input.width;
+		//step 1 create shared histogram using AtomicIntegerArray for thread-safe increments
+		AtomicIntegerArray[] sharedHistogram = new AtomicIntegerArray[3];
+		for(int color=0; color<3; color++) {
+			sharedHistogram[color]= new AtomicIntegerArray(level + 1);
+	}
 	
-	
-	
-	
-	
-	
-	
-	
-	
+		//define inner class for multi-threading, each thread computes histogram on a subset of rows
+		class MultiThreadHistogram2a extends Thread{
+			int startRow;
+			int endRow;
+			
+			public MultiThreadHistogram2a(int startRow, int endRow) {
+				this.startRow=startRow;
+				this.endRow=endRow;
+			}
+			
+			public void run() {
+				//step 2 local histogram for this thread to avoid contention
+				int [][]localHistogram=new int[3][level+1];
+				//might need level +1
+				//step 3 compute local histogram for assigned rows
+				for(int color=0; color<3; color++) {
+					for(int i=startRow; i< endRow;i++){
+						for(int j=0;j<input.width;j++) {
+							localHistogram[color][input.pixels[i][j][color]]++;
+							
+						}
+					}
+			}
+			// step 4 safely add local histogram counts to shared histogram
+			for(int color=0; color<3; color++) {
+				for(int i=0;i<=level;i++) {
+							sharedHistogram[color].getAndAdd(i, localHistogram[color][i]);
+					}
+				}
+		}
 		            
-}
+}       //step 5 create and start threads, dividing rows evenly among them
+		Thread[] threads=new Thread[numThreads];
+		int rowsPerThread= input.height/numThreads;
+		
+		for(int t=0; t<numThreads; t++) {
+			int startRow= t*rowsPerThread;
+			int endRow= (t==numThreads-1)? input.height : startRow+rowsPerThread;
+			threads[t]= new MultiThreadHistogram2a( startRow, endRow);
+			threads[t].start();
+		}
+		
+		//step 6 wait for all threads to finish execution
+		for(int t=0; t<numThreads; t++) {
+			threads[t].join();
+		}
+		
+		//step 7 compute cumulative histogram for each color channel from shared histogram
+		int[][] cumulativeHist= new int [3][level+1];
+		for(int color=0; color<3; color++) {
+			cumulativeHist[color][0]=sharedHistogram[color].get(0);
 
+			for(int i=1; i<=level;i++) {
+				cumulativeHist[color][i]= cumulativeHist[color][i-1]+sharedHistogram[color].get(i);
+			}
+			// normalize the cumulative histogram
+			for(int i=0; i<=level;i++) {
+				cumulativeHist[color][i]= (cumulativeHist[color][i]*level)/size;
+			}
+		}
+		
+		//performing histogram equalization
+		for(int i=0; i< input.height;i++){
+			for(int j=0;j<input.width;j++) {
+				for(int color=0; color<3 ; color++) {
+					output.pixels[i][j][color]=(short) cumulativeHist[color][input.pixels[i][j][color]];
+				}
+				
+			}
+		}
+}
+	
+	
+	public static void multiFigure2bHistogramEqualization(colourImage input, colourImage output, int numThreads) throws InterruptedException{
+		int size= input.height*input.width;
+		
+		//step 1 create shared histogram using AtomicIntegerArray for thread-safe increments
+		AtomicIntegerArray[] sharedHistogram = new AtomicIntegerArray[3];
+		for(int color=0; color<3; color++) {
+			sharedHistogram[color]= new AtomicIntegerArray(level + 1);
+		}
+		
+		class MultiThreadHistogram2b extends Thread{
+			int threadNumber;
+			
+			public MultiThreadHistogram2b (int threadNumber){
+				this.threadNumber=threadNumber;
+			}
+		
+			public void run() {
+				//step 2 local histogram for this thread to avoid contention
+				int [][]localHistogram=new int[3][level+1];
+				//might need level +1
+				//step 3 compute local histogram
+				for(int i=threadNumber; i<size; i+=numThreads) {
+					int k= i/input.width;
+					int j= i%input.width;
+					
+					for(int color=0; color<3; color++) {
+						localHistogram[color][input.pixels[k][j][color]]++;
+								
+						}
+				}
+				// step 4 safely add local histogram counts to shared histogram
+				for(int color=0; color<3; color++) {
+					for(int i=0;i<=level;i++) {
+								sharedHistogram[color].getAndAdd(i, localHistogram[color][i]);
+					}
+				}
+			}
+		}
+		//step 5 create and start threads
+		Thread[] threads=new Thread[numThreads];
+		for(int i=0; i<numThreads; i++) {
+			threads[i]=new MultiThreadHistogram2b(i);
+			threads[i].start();
+		}
+		
+		//step 6 wait for all threads to finish execution
+		for(int t=0; t<numThreads; t++) {
+					threads[t].join();
+		}
+		//step 7 compute cumulative histogram for each color channel from shared histogram
+		int[][] cumulativeHist= new int [3][level+1];
+		for(int color=0; color<3; color++) {
+			cumulativeHist[color][0]=sharedHistogram[color].get(0);
+			
+			for(int i=1; i<=level;i++) {
+				cumulativeHist[color][i]= cumulativeHist[color][i-1]+sharedHistogram[color].get(i);
+				}
+				// normalize the cumulative histogram
+				for(int i=0; i<=level;i++) {
+					cumulativeHist[color][i]= (cumulativeHist[color][i]*level)/size;
+				}
+			}
+				
+		//performing histogram equalization
+		for(int i=0; i< input.height;i++){
+			for(int j=0;j<input.width;j++) {
+				for(int color=0; color<3 ; color++) {
+					output.pixels[i][j][color]=(short) cumulativeHist[color][input.pixels[i][j][color]];
+						}
+					}
+				}
+			}
   
     	
 /**
@@ -135,7 +361,7 @@ public class ImageApplication{
  * A class with 2 Utility methods to read the pixels and dimension of an image, and write the image data into a jpeg file
  *
  */
-class imageReadWrite{
+static class imageReadWrite{
 
 	public static void readJpgImage(String fileName, colourImage ImgStruct) {
 		 try {
@@ -204,7 +430,7 @@ class imageReadWrite{
 
 }
 
-class matManipulation{
+static class matManipulation{
 	/**
 	 * reshape a matrix to a 1-D vector
 	 */
@@ -217,12 +443,13 @@ class matManipulation{
 }
 
 
-class colourImage {
+static class colourImage {
 	/**
 	 * A data structure to store a color image
 	 */
 	public int width;
 	public int height;
 	public short pixels[][][];
+}
 }
 
